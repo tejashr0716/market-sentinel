@@ -1,0 +1,100 @@
+name: MarketSentinel Financial Surveillance CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: marketsentinel_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:3-management-alpine
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics check_running"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build & Test .NET Core Engine
+        run: |
+          dotnet build MarketSentinel.sln
+          dotnet test MarketSentinel.sln --verbosity normal
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpq-dev postgresql-client
+
+      - name: Compile C++ SIMD Engine
+        run: |
+          g++ -O3 -shared -fPIC -std=c++17 -Icpp/include cpp/src/marketsentinel.cpp -o libmarketsentinel.so
+          g++ -O3 -std=c++17 -Icpp/include cpp/benchmarks/bench_engine.cpp cpp/src/marketsentinel.cpp -o bench_engine
+          ./bench_engine
+
+      - name: Seed Database Schema
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d marketsentinel_db -f sql/schema.sql
+
+      - name: Install Python Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Pytest Test Suite
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: marketsentinel_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          REDIS_DB: 10
+          RABBITMQ_HOST: localhost
+          RABBITMQ_PORT: 5672
+        run: |
+          pytest -v python/tests/test_marketsentinel.py

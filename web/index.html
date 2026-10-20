@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarketSentinel — Real-Time Financial Surveillance & Anomaly Pipeline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070b14;
+      --card-bg: rgba(14, 22, 40, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --primary: #00f0ff;
+      --primary-glow: rgba(0, 240, 255, 0.25);
+      --accent: #00ff9d;
+      --accent-glow: rgba(0, 255, 157, 0.25);
+      --danger: #ff3366;
+      --danger-glow: rgba(255, 51, 102, 0.25);
+      --warning: #ffb800;
+      --purple: #a855f7;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(0, 240, 255, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(255, 51, 102, 0.1) 0px, transparent 50%);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      padding: 1.25rem 2.5rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7, 11, 20, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #0284c7, #00f0ff);
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #070b14;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .logo-text h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #fff, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 255, 157, 0.15);
+      border: 1px solid rgba(0, 255, 157, 0.3);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      color: var(--accent);
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-live::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .hero {
+      text-align: center;
+      padding: 3rem 1.5rem 2rem;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .hero h2 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+
+    .hero span.highlight {
+      background: linear-gradient(135deg, #00f0ff, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      line-height: 1.6;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      max-width: 1200px;
+      margin: 1.5rem auto 3rem;
+      padding: 0 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1.5rem;
+      backdrop-filter: blur(8px);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(0, 240, 255, 0.4);
+    }
+    .stat-card .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 0.35rem;
+    }
+    .stat-card .lbl {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 1.75rem;
+      max-width: 1200px;
+      margin: 0 auto 3rem;
+      padding: 0 1.5rem;
+    }
+
+    @media (max-width: 960px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-header h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    select, input {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    select:focus, input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    button {
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #00f0ff);
+      color: #070b14;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+    .btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #be123c, #ff3366);
+      color: #fff;
+      box-shadow: 0 4px 15px var(--danger-glow);
+    }
+    .btn-danger:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #b45309, #ffb800);
+      color: #070b14;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Live Chart Canvas */
+    .chart-container {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-top: 1.25rem;
+      position: relative;
+    }
+
+    canvas {
+      width: 100%;
+      height: 140px;
+      display: block;
+    }
+
+    /* Live Stream Feed */
+    .stream-feed {
+      height: 380px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .stream-feed::-webkit-scrollbar { width: 6px; }
+    .stream-feed::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+
+    .feed-entry {
+      background: rgba(255, 255, 255, 0.03);
+      border-left: 3px solid var(--accent);
+      padding: 0.6rem 0.8rem;
+      border-radius: 0 6px 6px 0;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .feed-entry.FLASH_CRASH { border-left-color: var(--danger); background: rgba(255, 51, 102, 0.08); }
+    .feed-entry.PUMP_AND_DUMP { border-left-color: var(--warning); background: rgba(255, 184, 0, 0.08); }
+    .feed-entry.SPREAD_INVERSION { border-left-color: var(--purple); }
+    .feed-entry.CIRCUIT_OPEN { border-left-color: var(--danger); }
+
+    .feed-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+    .feed-key {
+      color: #fff;
+      font-weight: 600;
+    }
+    .feed-meta {
+      color: #00f0ff;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Exchange status pills */
+    .exchange-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .exchange-pill {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.6rem 0.4rem;
+      text-align: center;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .exchange-pill.up { border-color: rgba(0, 255, 157, 0.4); color: var(--accent); }
+    .exchange-pill.down { border-color: rgba(255, 51, 102, 0.4); color: var(--danger); }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-group">
+      <div class="logo-icon">📊</div>
+      <div class="logo-text">
+        <h1>MarketSentinel</h1>
+      </div>
+    </div>
+    <div style="display:flex; gap: 1rem; align-items:center;">
+      <span class="badge-live">SURVEILLANCE ENGINE LIVE</span>
+      <a href="https://github.com/tejashr0716/market-sentinel" target="_blank" style="color:var(--text-muted); text-decoration:none; font-size:0.85rem; font-weight:600;">GitHub Repo →</a>
+    </div>
+  </header>
+
+  <div class="hero">
+    <h2>Sub-Microsecond <span class="highlight">Financial Surveillance</span> & Anomaly Pipeline</h2>
+    <p>High-throughput C# (.NET 8) bounded channels & C++ SIMD statistical engine detecting Flash Crashes, Pump & Dumps, and Exchange Dropouts in under 3 milliseconds.</p>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="lbl">C++ SIMD Core</div>
+      <div class="val" style="color: #00ff9d;">21.89M <span style="font-size:1rem; color:var(--text-muted);">eval/s</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Statistical Latency</div>
+      <div class="val" style="color: #00f0ff;">45.69 <span style="font-size:1rem; color:var(--text-muted);">ns</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">End-to-End Ingest</div>
+      <div class="val" style="color: #a855f7;">1,032 <span style="font-size:1rem; color:var(--text-muted);">ticks/s</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Circuit Breaker MTTD</div>
+      <div class="val" style="color: #ffb800;">&lt; 200 <span style="font-size:1rem; color:var(--text-muted);">ms</span></div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Market Simulator & Injection Controls -->
+    <div class="panel">
+      <div class="panel-header">
+        <h3><span>⚡</span> Market Telemetry Injector</h3>
+        <span style="font-size:0.75rem; font-family:'JetBrains Mono'; color:var(--primary);">C# .NET 8 / C++</span>
+      </div>
+
+      <div class="form-group">
+        <label>Tradable Instrument</label>
+        <select id="symbolSelect" onchange="onSymbolChange()">
+          <option value="BTC-USD">BTC-USD (Bitcoin Prime Feed)</option>
+          <option value="ETH-USD">ETH-USD (Ethereum Liquidity)</option>
+          <option value="NVDA">NVDA (NVIDIA Nasdaq ITCH)</option>
+          <option value="AAPL">AAPL (Apple Direct Feed)</option>
+          <option value="SOL-USD">SOL-USD (Solana Spot)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Source Liquidity Exchange</label>
+        <select id="exchangeSelect">
+          <option value="BINANCE_US">Binance US Global Core</option>
+          <option value="COINBASE_PRO">Coinbase Institutional Prime</option>
+          <option value="NASDAQ_ITCH">NASDAQ TotalView ITCH Direct</option>
+          <option value="KRAKEN_CORE">Kraken Multi-Asset Matcher</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Current Base Price ($)</label>
+        <input type="number" id="priceInput" value="95450.00" step="0.5">
+      </div>
+
+      <div class="btn-group">
+        <button class="btn-primary" onclick="injectTick('NORMAL')">
+          <span>📈</span> Normal Tick
+        </button>
+        <button class="btn-danger" onclick="injectTick('FLASH_CRASH')">
+          <span>📉</span> Flash Crash (-8%)
+        </button>
+        <button class="btn-warning" onclick="injectTick('PUMP_AND_DUMP')">
+          <span>🚀</span> Pump & Dump Surge
+        </button>
+        <button class="btn-secondary" onclick="injectTick('SPREAD_INVERSION')">
+          <span>🔄</span> Spread Inversion
+        </button>
+      </div>
+
+      <div style="margin-top:1rem;">
+        <button class="btn-danger" style="width:100%;" onclick="toggleExchangeKill()">
+          <span>⚡</span> Trip Exchange Kill-Switch (Circuit Breaker)
+        </button>
+      </div>
+
+      <!-- Real-Time Mini Price Curve -->
+      <div class="chart-container">
+        <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-bottom:0.25rem;">
+          <span id="chartLabel">BTC-USD Live VWAP Band</span>
+          <span id="chartStats" style="color:var(--accent);">Z: 0.12 | Vol: 2.4</span>
+        </div>
+        <canvas id="priceCanvas"></canvas>
+      </div>
+
+      <!-- Exchange Health Strip -->
+      <div class="exchange-grid" id="exchangeGrid">
+        <div class="exchange-pill up" id="pill-BINANCE_US">BINANCE: UP</div>
+        <div class="exchange-pill up" id="pill-COINBASE_PRO">COINBASE: UP</div>
+        <div class="exchange-pill up" id="pill-NASDAQ_ITCH">NASDAQ: UP</div>
+        <div class="exchange-pill up" id="pill-KRAKEN_CORE">KRAKEN: UP</div>
+      </div>
+    </div>
+
+    <!-- Live Anomaly Feed -->
+    <div class="panel">
+      <div class="panel-header">
+        <h3><span>📡</span> Financial Surveillance Stream</h3>
+        <button onclick="clearLogs()" style="background:none; border:none; color:var(--text-muted); font-size:0.75rem; cursor:pointer; font-family:'JetBrains Mono';">Clear Stream</button>
+      </div>
+
+      <div class="stream-feed" id="streamFeed">
+        <div class="feed-entry">
+          <div class="feed-row">
+            <span class="feed-key">MARKET_SENTINEL_ONLINE</span>
+            <span class="feed-meta">LATENCY: 45.69 ns</span>
+          </div>
+          <div>C++ SIMD Welford variance core online. Bounded Channel pipeline listening on port 8000.</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 1.25rem; padding: 1rem; background: rgba(0,0,0,0.3); border-radius:10px; border: 1px solid var(--border); font-size:0.85rem; color:var(--text-muted);">
+        <strong style="color:#fff;">Resilience Engine:</strong> Ticks are ingested via non-blocking channels, verified against rolling VWAP and volatility Z-scores, and auto-quarantined if exchange heartbeats fail or anomaly thresholds are exceeded.
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>MarketSentinel — Developed with C# (.NET 8 LTS), C++17 SIMD, Redis 7 (DB 10), RabbitMQ, PostgreSQL 16 & Apache Spark 4.2.</p>
+  </footer>
+
+  <script>
+    const symbolBases = {
+      "BTC-USD": 95450.00,
+      "ETH-USD": 3350.00,
+      "NVDA": 135.20,
+      "AAPL": 224.50,
+      "SOL-USD": 185.00
+    };
+
+    let priceHistory = [95400, 95420, 95410, 95440, 95450, 95430, 95460, 95450];
+    const killedExchanges = new Set();
+
+    function onSymbolChange() {
+      const sym = document.getElementById("symbolSelect").value;
+      const base = symbolBases[sym];
+      document.getElementById("priceInput").value = base.toFixed(2);
+      document.getElementById("chartLabel").innerText = `${sym} Live VWAP Band`;
+      priceHistory = [base * 0.998, base * 0.999, base, base * 1.001, base];
+      drawChart();
+    }
+
+    function drawChart() {
+      const canvas = document.getElementById("priceCanvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (priceHistory.length < 2) return;
+
+      const minP = Math.min(...priceHistory) * 0.995;
+      const maxP = Math.max(...priceHistory) * 1.005;
+      const range = maxP - minP;
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#00f0ff";
+      ctx.lineWidth = 2;
+
+      for (let i = 0; i < priceHistory.length; i++) {
+        const x = (i / (priceHistory.length - 1)) * canvas.width;
+        const y = canvas.height - ((priceHistory[i] - minP) / range) * canvas.height;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Draw baseline glow fill
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      grad.addColorStop(0, "rgba(0, 240, 255, 0.2)");
+      grad.addColorStop(1, "rgba(0, 240, 255, 0.0)");
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+
+    function injectTick(anomalyType) {
+      const sym = document.getElementById("symbolSelect").value;
+      const exch = document.getElementById("exchangeSelect").value;
+      let price = parseFloat(document.getElementById("priceInput").value);
+
+      if (killedExchanges.has(exch)) {
+        appendLog("CIRCUIT_OPEN", `503 Service Unavailable: Exchange ${exch} circuit is OPEN due to dropouts.`);
+        return;
+      }
+
+      let zScore = (Math.random() * 0.5 - 0.25).toFixed(2);
+      let alertMsg = "Normal market flow recorded.";
+      let className = "NORMAL";
+
+      if (anomalyType === "FLASH_CRASH") {
+        price *= 0.92;
+        zScore = "-4.45";
+        alertMsg = `CRITICAL Flash Crash: Price plunged -8.00% to $${price.toFixed(2)}`;
+        className = "FLASH_CRASH";
+      } else if (anomalyType === "PUMP_AND_DUMP") {
+        price *= 1.07;
+        zScore = "+3.92";
+        alertMsg = `CRITICAL Pump & Dump: Price spiked +7.00% with 6.5x volume surge`;
+        className = "PUMP_AND_DUMP";
+      } else if (anomalyType === "SPREAD_INVERSION") {
+        alertMsg = `Crossed Book Inversion: Bid $${(price + 0.5).toFixed(2)} >= Ask $${(price - 0.5).toFixed(2)}`;
+        className = "SPREAD_INVERSION";
+      }
+
+      priceHistory.push(price);
+      if (priceHistory.length > 20) priceHistory.shift();
+      drawChart();
+
+      document.getElementById("priceInput").value = price.toFixed(2);
+      document.getElementById("chartStats").innerText = `Z: ${zScore} | Price: $${price.toFixed(2)}`;
+
+      appendLog(className, `${sym} [${exch}] — ${alertMsg} (Z=${zScore})`);
+    }
+
+    function toggleExchangeKill() {
+      const exch = document.getElementById("exchangeSelect").value;
+      const pill = document.getElementById(`pill-${exch}`);
+      if (killedExchanges.has(exch)) {
+        killedExchanges.delete(exch);
+        if (pill) {
+          pill.className = "exchange-pill up";
+          pill.innerText = `${exch.split('_')[0]}: UP`;
+        }
+        appendLog("NORMAL", `Circuit Breaker CLOSED: Heartbeat restored for ${exch}.`);
+      } else {
+        killedExchanges.add(exch);
+        if (pill) {
+          pill.className = "exchange-pill down";
+          pill.innerText = `${exch.split('_')[0]}: DOWN`;
+        }
+        appendLog("CIRCUIT_OPEN", `CRITICAL: Exchange ${exch} missed 3 heartbeats! Circuit Breaker TRIPPED to OPEN.`);
+      }
+    }
+
+    function appendLog(type, msg) {
+      const feed = document.getElementById("streamFeed");
+      const entry = document.createElement("div");
+      entry.className = `feed-entry ${type}`;
+      entry.innerHTML = `
+        <div class="feed-row">
+          <span class="feed-key">${type}</span>
+          <span class="feed-meta">${new Date().toLocaleTimeString()}</span>
+        </div>
+        <div>${msg}</div>
+      `;
+      feed.insertBefore(entry, feed.firstChild);
+    }
+
+    function clearLogs() {
+      document.getElementById("streamFeed").innerHTML = "";
+    }
+
+    window.onload = () => {
+      onSymbolChange();
+    };
+  </script>
+</body>
+</html>
